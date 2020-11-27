@@ -1,4 +1,4 @@
-import os, system, json, rdstdin, sequtils, strutils
+import os, system, json, sequtils, strutils
 
 let path = $getCurrentDir()
 
