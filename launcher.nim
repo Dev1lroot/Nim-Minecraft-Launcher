@@ -1,12 +1,9 @@
-import os, system, json, sequtils, strutils
+import os, system, json, rdstdin, sequtils, strutils
 
 let path = $getCurrentDir()
 
 let username = "Dev1lroot"
-let version = "1.12.2-forge1.12.2-14.23.5.2847" #version folder name in /versions
-
-let vm_args = "-Xms1024M -Xmx1024M -Djava.library.path=I:/.minecraft/versions/1.12.2/natives" #lwjgl64.dll location
-let auth = "--username "&username&" --uuid N/A --accessToken N/A --userType mojang" #use username only or setup your identity manually
+let version = "1.12.2-forge1.12.2-14.23.5.2847"
 
 proc getAssetIndex(mc_version: string): string =
   if(existsFile(path&"/assets/indexes/"&mc_version&".json")):
@@ -36,18 +33,42 @@ proc getLibraries(config: string): seq[string] =
         libs.add file.path
   return libs
 
-if(existsFile(getVersionConfigPath(version))):
-  var file = readFile(getVersionConfigPath(version))
-  var json = parseJson(file)
-
+proc collectClasspath(fg_version, mc_version: string): string =
   echo "LOADING FORGE CLASSPATH"
-  var fg_libs = getLibraries(getVersionConfigPath(version))
-
+  var fg_libs = getLibraries(getVersionConfigPath(fg_version))
+  
   echo "LOADING GAME CLASSPATH"
-  var mc_libs = getLibraries(getVersionConfigPath(json["inheritsFrom"].getStr()))
-
-  echo "LOADING GAME"
+  var mc_libs = getLibraries(getVersionConfigPath(mc_version))
+  
   var gm_libs = concat(fg_libs, mc_libs)
-  var cp = gm_libs.join(";")
-  cp &= ";"&path&"/versions/"&json["jar"].getStr()&"/"&json["jar"].getStr()&".jar";
-  discard execShellCmd("java "&vm_args&" -cp "&cp&" net.minecraft.launchwrapper.Launch --width 854 --height 480 "&auth&" --version "&version&" --gameDir "&path&" --assetsDir "&path&"/assets --assetIndex "&getAssetIndex(json["inheritsFrom"].getStr())&" --tweakClass net.minecraftforge.fml.common.launcher.FMLTweaker --versionType Forge")
+  return gm_libs.join(";")&";"&path&"/versions/"&mc_version&"/"&mc_version&".jar";
+
+proc startClient() =
+  if(existsFile(getVersionConfigPath(version))):
+    let path = $getCurrentDir()
+
+    var json = parseJson(readFile(getVersionConfigPath(version)))
+  
+    var cp = collectClasspath(version, json["inheritsFrom"].getStr())
+
+    var args: seq[string]
+    args.add "-Xms1024M"
+    args.add "-Xmx1024M"
+    args.add "-Djava.library.path="&path&"/versions/"&json["jar"].getStr()&"/natives"
+    args.add "-cp "&cp
+    args.add "net.minecraft.launchwrapper.Launch"
+    args.add "--width 854"
+    args.add "--height 480"
+    args.add "--username "&username
+    args.add "--uuid N/A"
+    args.add "--accessToken N/A"
+    args.add "--userType mojang"
+    args.add "--version "&version
+    args.add "--gameDir "&path
+    args.add "--assetsDir "&path&"/assets"
+    args.add "--assetIndex "&getAssetIndex(json["inheritsFrom"].getStr())
+    args.add "--tweakClass net.minecraftforge.fml.common.launcher.FMLTweaker"
+    args.add "--versionType Forge"
+    discard execShellCmd("java "&args.join(" "))
+
+startClient()
