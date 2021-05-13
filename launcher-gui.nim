@@ -84,7 +84,7 @@ proc startClient(client: Client, user: User) =
 proc authClient(username,password,version: string, memory: int) =
   var httpc = newHttpClient()
 
-  var result = httpc.getContent("https://test.Shadowcraft.ru/api/launcher.php?username="&username);
+  var result = httpc.getContent("https://yourcheckserver.net/api/launcher.php?username="&username);
   echo result;
   var data = parseJson(result);
 
